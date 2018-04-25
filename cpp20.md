@@ -45,7 +45,42 @@ Note : les liens vers les documents des propositions sont données dans les réf
 
 **Ajouts dans <chrono>**
 
-Ajout des calendriers et time zone.
+Ajout de la gestion des calendriers et des fuseaux horaires. Des petites modifications ont été apportées à <chrono> afin d'étendre son fonctionnement aux dates. Seul le calendrier grégorien [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) sera incorporé au langage, des implémentations du côté client pourront interagir avec la bibliothèque standard afin d'offrir la gestion d'autres calendriers (plus spécifiques à un pays ou une culture).
+Les fuseaux horaires se baseront naturellement sur la base de données IANA et une gestion des secondes intercallaires est également proposée. Enfin, la famille des *strftime* du C se retrouvera également, afin de lire et écrire des dates de manières simplifiées et auront été renommées respectivement *parse* et *format* et prenant en compte ou non la locale.
+
+De manière plus précise, cinq notions seront ajoutées:
+- Calendiers: Précision à une journée près.
+- Temps système: Gestion du temps analogue au temps UNIX.
+- Temps local: Pour les temps sans aucune considération du fuseau horaire.
+- Fuseau horaire: Ensemble des données spécifiques à une zone géographiques et ses variations au cours du temps. Cela inclut également le nom de la zone, son abbréviation, son décalage UTC, ...
+- Temps précis: Temps système combiné à un fuseau horaire.
+
+Une syntaxe spécialisée a également été adoptée afin de simplifier l'écriture.
+```cpp
+constexpr year_month_day x1 = 2015_y/mar/22;
+constexpr year_month_day x2 = x1 + months{1};
+constexpr year_month_weekday_last x3 = sun[last]/mar/2015;
+
+auto zone = locate_zone("America/Los_Angeles");
+auto now = floor<milliseconds>(system_clock::now());
+auto local = zone->to_local(now);
+cout << now << ' ' << "UTC" << ‘\n';                // 2015-09-25 16:50:06.123 UTC
+cout << local.first << ' ' << local.second << '\n'; // 2015-09-25 09:50:06.123 PDT
+
+auto tp = sys_days{2016y/May/29d} + 7h + 30min + 6s + 153ms; // 2016-05-29 07:30:06.153 UTC
+zoned_time zt = {"Asia/Tokyo", tp};
+cout << zt << '\n';                                          // 2016-05-29 16:30:06.153 JST
+
+auto tp = day_point{jan/3/1970} + 7h + 33min + 20s;
+assert(tp.time_since_epoch() == 200000s);
+
+for (auto& l : get_tzdb().leaps)
+  cout << l.date() << '\n'; // Affiche tous les jours où il y a eu une seconde intercallaire.
+```
+
+Cependant, la majorité des fonctions seront marquées comme *noexcept*, cela implique que nous serons capable de produire des dates invalides. Pour cela, une méthode "ok" est disponible afin de s'assurer que la date existe réellement.
+
+Une implémentation canonique est disponible [ici](https://github.com/HowardHinnant/date).
 
 **span**
 
